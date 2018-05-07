@@ -6,7 +6,7 @@ import tqdm
 
 CLASSES = [33, 34, 35, 36, 38, 39, 40] #car, motorcycle, bicycle, pedestrian, truck, bus, tricycle
 N_EXAMPLE = 10
-N_TRAINING_DATA = 90
+N_TRAINING_DATA = 8
 
 
 def load_dataset(dataset_path,N_examples,N_traingdata):
