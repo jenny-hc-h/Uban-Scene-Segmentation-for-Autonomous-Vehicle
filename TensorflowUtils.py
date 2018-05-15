@@ -10,13 +10,13 @@ import zipfile
 import scipy.io
 
 
-def get_model_data(dir_path):#, model_url):
-    #maybe_download_and_extract(dir_path, model_url)
-    #filename = model_url.split("/")[-1]
-    #filepath = os.path.join(dir_path, filename)
-    if not os.path.exists(dir_path):
+def get_model_data(dir_path, model_url):
+    maybe_download_and_extract(dir_path, model_url)
+    filename = model_url.split("/")[-1]
+    filepath = os.path.join(dir_path, filename)
+    if not os.path.exists(filepath ):
         raise IOError("VGG Model not found!")
-    data = scipy.io.loadmat(dir_path)
+    data = scipy.io.loadmat(filepath )
     return data
 
 

@@ -18,14 +18,8 @@ from os.path import dirname
 Reference: https://github.com/shekkizh/FCN.tensorflow
 """
 
-#FLAGS = tf.flags.FLAGS
-#tf.flags.DEFINE_string("data_dir", "CityscapesDataset", "path to dataset")
-#tf.flags.DEFINE_string("model_dir", "Model_zoo/", "Path to vgg model mat")
-#tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")
-#tf.flags.DEFINE_string('mode', "train", "Mode train/ visualize")
-
-#MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
-MODEL_DIR = dirname(__file__)+'/Model/imagenet-vgg-verydeep-19.mat'
+MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
+MODEL_DIR = dirname(__file__)+'/Model/'
 LOG_DIR = dirname(__file__)+'/logs/'
 DEBUG = False
 
@@ -122,7 +116,7 @@ def inference(image, keep_prob):
     :return:
     """
     print("setting up vgg initialized conv layers ...")
-    model_data = utils.get_model_data(MODEL_DIR)#, MODEL_URL)
+    model_data = utils.get_model_data(MODEL_DIR, MODEL_URL)
 
     mean = model_data['normalization'][0][0][0]
     mean_pixel = np.mean(mean, axis=(0, 1))
