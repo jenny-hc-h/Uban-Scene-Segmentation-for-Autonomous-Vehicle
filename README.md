@@ -6,4 +6,4 @@ To execute this project, type the following command in terminal:
 
 DATASET_DIR is the direction of the dataset folder.
 
-MODE is the mode "train", "test" or "visualize".
+MODE is the mode "train" or "visualize".
