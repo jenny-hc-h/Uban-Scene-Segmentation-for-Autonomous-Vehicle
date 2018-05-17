@@ -23,23 +23,27 @@ python /Users/JennyH/Desktop/Jenny/UCSD/HW/MachineLearning/Final_Project/sceneSe
 2. implement AlexNet & GoogleNet
 
 """
-
-MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
-MODEL_DIR = dirname(__file__)+'/Model/'
-LOG_DIR = dirname(__file__)+'/logs/VGGNet/'
-
-MAX_ITERATION = int(1e5 + 1)
+# ==========================================================================================
+N_EXAMPLE = 1000 # maximum 3475
+N_TRAINING_DATA = 900
 LEARNING_RATE = 0.0001
 BATCH_SIZE = 10
-NUM_OF_CLASSES = 19 #maximum 19
+TRAIN_CLASSES = range(19) #[0, 11, 13] # max: range(19)
+NUM_OF_CLASSES = len(TRAIN_CLASSES) 
+# ..........................................................................................
+MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
+MODEL_DIR = dirname(__file__)+'/Model/'
+LOG_DIR = dirname(__file__)+'/logs/VGGNet_c'+str(NUM_OF_CLASSES)+'/'
+# ==========================================================================================
+
+MAX_ITERATION = int(1e5 + 1)
+IMSIZE_X = 256
+IMSIZE_Y = 512
 RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(190,153,153),
                 5:(153,153,153),6:(250,170,30),7:(220,220,0),8:(107,142,35),9:(152,251,152),
                 10:(70,130,180),11:(220,20,60),12:(255,0,0),13:(0,0,142),14:(0,0,70),
                 15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
-N_EXAMPLE = 1000 # maximum 3475
-N_TRAINING_DATA = 900
-IMSIZE_X = 256
-IMSIZE_Y = 512
+
 
 def load_dataset(dataset_path,N_examples,N_traingdata):
     """
@@ -58,12 +62,12 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
         lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
         lab_other = (np.sum(lab[:,:,0:NUM_OF_CLASSES], axis=2)==0).astype(int)
         labelset.append(np.concatenate((lab[:,:,0:NUM_OF_CLASSES],np.expand_dims(lab_other, axis=2)),axis=2))
-        #lab_other = (np.sum(lab[:,:,np.array([11,13])], axis=2)==0).astype(int)
-        #labelset.append(np.concatenate((lab[:,:,np.array([11,13])],np.expand_dims(lab_other, axis=2)),axis=2))
+        #lab_other = (np.sum(lab[:,:,np.array(TRAIN_CLASSES)], axis=2)==0).astype(int)
+        #labelset.append(np.concatenate((lab[:,:,np.array(TRAIN_CLASSES)],np.expand_dims(lab_other, axis=2)),axis=2))
         
         # load images --- N x H x W x 3
         image = Image.open(im_fpath[n])
-        imageset.append(np.array(spmi.imresize(image, (image.size[1]/4,image.size[0]/4,3), interp='bilinear')))
+        imageset.append(np.array(spmi.imresize(image, (int(image.size[1]/4),int(image.size[0]/4),3), interp='bilinear')))
 
     # Split the dataset into training and testing sets
     train_data = np.array(imageset[0:N_traingdata]) 
