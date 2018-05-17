@@ -16,17 +16,27 @@ from os.path import dirname
 
 """
 Reference: https://github.com/shekkizh/FCN.tensorflow
+python /Users/JennyH/Desktop/Jenny/UCSD/HW/MachineLearning/Final_Project/sceneSeg_v1.py --dataset /Users/JennyH/Desktop/Jenny/UCSD/HW/MachineLearning/Final_Project/CityscapesDataset --mode train
+
+1. visualize mode : input an image and output a predict result(RGB)
+2. extract one of the convolution layer and add it to the final layer -> predict (refer the paper)
+3. implement AlexNet & GoogleNet
+
 """
 
 MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
 MODEL_DIR = dirname(__file__)+'/Model/'
-LOG_DIR = dirname(__file__)+'/logs/'
+LOG_DIR = dirname(__file__)+'/logs/VGGNet/'
 DEBUG = False
 
 MAX_ITERATION = int(1e5 + 1)
 LEARNING_RATE = 0.0001
-BATCH_SIZE = 2
-NUM_OF_CLASSESS = 2 #maximum 18
+BATCH_SIZE = 1
+NUM_OF_CLASSES = 19 #maximum 19
+RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(190,153,153),
+                5:(153,153,153),6:(250,170,30),7:(220,220,0),8:(107,142,35),9:(152,251,152),
+                10:(70,130,180),11:(220,20,60),12:(255,0,0),13:(0,0,142),14:(0,0,70),
+                15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
 N_EXAMPLE = 50 # maximum 3475
 N_TRAINING_DATA = 40
 IMSIZE_X = 256
@@ -47,8 +57,11 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
         # load labels --- N x H x W x C(20)
         lb_fn = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
         lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
-        lab_other = (np.sum(lab[:,:,0:NUM_OF_CLASSESS], axis=2)==0).astype(int)
-        labelset.append(np.concatenate((lab[:,:,0:NUM_OF_CLASSESS],np.expand_dims(lab_other, axis=2)),axis=2))
+        lab_other = (np.sum(lab[:,:,0:NUM_OF_CLASSES], axis=2)==0).astype(int)
+        labelset.append(np.concatenate((lab[:,:,0:NUM_OF_CLASSES],np.expand_dims(lab_other, axis=2)),axis=2))
+        #lab_other = (np.sum(lab[:,:,np.array([11,13])], axis=2)==0).astype(int)
+        #labelset.append(np.concatenate((lab[:,:,np.array([11,13])],np.expand_dims(lab_other, axis=2)),axis=2))
+        
         # load images --- N x H x W x 3
         image = Image.open(im_fpath[n])
         imageset.append(np.array(spmi.imresize(image, (image.size[1]/4,image.size[0]/4,3), interp='bilinear')))
@@ -147,14 +160,14 @@ def inference(image, keep_prob):
             utils.add_activation_summary(relu7)
         relu_dropout7 = tf.nn.dropout(relu7, keep_prob=keep_prob)
 
-        W8 = utils.weight_variable([1, 1, 4096, NUM_OF_CLASSESS+1], name="W8")
-        b8 = utils.bias_variable([NUM_OF_CLASSESS+1], name="b8")
+        W8 = utils.weight_variable([1, 1, 4096, NUM_OF_CLASSES+1], name="W8")
+        b8 = utils.bias_variable([NUM_OF_CLASSES+1], name="b8")
         conv8 = utils.conv2d_basic(relu_dropout7, W8, b8)
         # annotation_pred1 = tf.argmax(conv8, dimension=3, name="prediction1")
 
         # now to upscale to actual image size
         deconv_shape1 = image_net["pool4"].get_shape()
-        W_t1 = utils.weight_variable([4, 4, deconv_shape1[3].value, NUM_OF_CLASSESS+1], name="W_t1")
+        W_t1 = utils.weight_variable([4, 4, deconv_shape1[3].value, NUM_OF_CLASSES+1], name="W_t1")
         b_t1 = utils.bias_variable([deconv_shape1[3].value], name="b_t1")
         conv_t1 = utils.conv2d_transpose_strided(conv8, W_t1, b_t1, output_shape=tf.shape(image_net["pool4"]))
         fuse_1 = tf.add(conv_t1, image_net["pool4"], name="fuse_1")
@@ -166,9 +179,9 @@ def inference(image, keep_prob):
         fuse_2 = tf.add(conv_t2, image_net["pool3"], name="fuse_2")
 
         shape = tf.shape(image)
-        deconv_shape3 = tf.stack([shape[0], shape[1], shape[2], NUM_OF_CLASSESS+1])
-        W_t3 = utils.weight_variable([16, 16, NUM_OF_CLASSESS+1, deconv_shape2[3].value], name="W_t3")
-        b_t3 = utils.bias_variable([NUM_OF_CLASSESS+1], name="b_t3")
+        deconv_shape3 = tf.stack([shape[0], shape[1], shape[2], NUM_OF_CLASSES+1])
+        W_t3 = utils.weight_variable([16, 16, NUM_OF_CLASSES+1, deconv_shape2[3].value], name="W_t3")
+        b_t3 = utils.bias_variable([NUM_OF_CLASSES+1], name="b_t3")
         conv_t3 = utils.conv2d_transpose_strided(fuse_2, W_t3, b_t3, output_shape=deconv_shape3, stride=8)
 
         annotation_pred = tf.argmax(conv_t3, dimension=3, name="prediction")
@@ -176,34 +189,41 @@ def inference(image, keep_prob):
     return tf.expand_dims(annotation_pred+1, dim=3), conv_t3
 
 
-def train(loss_val, var_list):
+def train(loss_val, var_list, g_step):
     optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
     grads = optimizer.compute_gradients(loss_val, var_list=var_list)
     if DEBUG:
         # print(len(var_list))
         for grad, var in grads:
             utils.add_gradient_summary(grad, var)
-    return optimizer.apply_gradients(grads)
+
+    return optimizer.apply_gradients(grads, global_step=g_step)
 
 
 def main(mode, data_dir):
     keep_probability = tf.placeholder(tf.float32, name="keep_probabilty")
     image = tf.placeholder(tf.float32, shape=[None, IMSIZE_X, IMSIZE_Y, 3], name="input_image")
-    annotation = tf.placeholder(tf.float32, shape=[None, IMSIZE_X, IMSIZE_Y, NUM_OF_CLASSESS+1], name="annotation")
+    annotation = tf.placeholder(tf.float32, shape=[None, IMSIZE_X, IMSIZE_Y, NUM_OF_CLASSES+1], name="annotation")
 
     pred_annotation, logits = inference(image, keep_probability)
     tf.summary.image("input_image", image, max_outputs=2)
-    tf.summary.image("ground_truth", tf.cast(tf.expand_dims(tf.argmax(annotation, axis=3)+1,dim=3)*255/19, tf.uint8), max_outputs=2)
+    gt_lab = tf.expand_dims(tf.argmax(annotation, axis=3)+1,dim=3)
+    tf.summary.image("ground_truth", tf.cast(gt_lab*255/19, tf.uint8), max_outputs=2)
     tf.summary.image("pred_annotation", tf.cast(pred_annotation*255/19, tf.uint8), max_outputs=2)
-    #loss = tf.reduce_mean((tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,labels=tf.squeeze(annotation, squeeze_dims=[3]),name="entropy")))
+    # Compute loss
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits,labels=annotation,name="entropy"))
-    tf.summary.scalar("entropy", loss)
+    tf.summary.scalar("entropy_loss", loss)
+
+    # Compute accuracy
+    pixel_acc = tf.div(tf.reduce_sum(tf.cast(tf.equal(gt_lab,pred_annotation), tf.float32)),tf.cast(tf.reduce_sum(annotation), tf.float32))
+    tf.summary.scalar("pixel_accuracy", pixel_acc)
 
     trainable_var = tf.trainable_variables()
     if DEBUG:
         for var in trainable_var:
             utils.add_to_regularization_and_summary(var)
-    train_op = train(loss, trainable_var)
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    train_op = train(loss, trainable_var,global_step)
 
     print("Setting up summary op...")
     summary_op = tf.summary.merge_all()
@@ -222,12 +242,13 @@ def main(mode, data_dir):
 
     print("Setting up Saver...")
     saver = tf.train.Saver()
-    summary_writer = tf.summary.FileWriter(LOG_DIR, sess.graph)
+    #summary_writer = tf.summary.FileWriter(LOG_DIR, sess.graph)
+    writer_valid = tf.summary.FileWriter(LOG_DIR+'valid')
+    writer_train = tf.summary.FileWriter(LOG_DIR+'train')
 
     sess.run(tf.global_variables_initializer())
     ckpt = tf.train.get_checkpoint_state(LOG_DIR)
     if ckpt and ckpt.model_checkpoint_path:
-        print(ckpt.model_checkpoint_path)
         saver.restore(sess, ckpt.model_checkpoint_path)
         print("Model restored...")
 
@@ -237,18 +258,21 @@ def main(mode, data_dir):
             feed_dict = {image: train_images, annotation: train_annotations, keep_probability: 0.85}
 
             sess.run(train_op, feed_dict=feed_dict)
-
+            step = tf.train.global_step(sess, global_step) - 1
             if itr % 10 == 0:
-                train_loss, summary_str = sess.run([loss, summary_op], feed_dict=feed_dict)
-                print("Step: %d, Train_loss:%g" % (itr, train_loss))
-                summary_writer.add_summary(summary_str, itr)
+                train_loss, train_acc, summary_str = sess.run([loss, pixel_acc, summary_op], feed_dict=feed_dict)
+                print("Step: %d, Train_loss:%g, Train_acc:%g" % (step, train_loss, train_acc))
+                writer_train.add_summary(summary_str, step)
+                saver.save(sess, LOG_DIR + "model.ckpt", global_step=global_step)
 
-            if itr % 500 == 0:
+            if itr % 100 == 0:
+                valid_feed_dict = {image: valid_images, annotation: valid_annotations, keep_probability: 1.0}
                 valid_images, valid_annotations = validation_dataset_reader.next_batch(BATCH_SIZE)
-                valid_loss = sess.run(loss, feed_dict={image: valid_images, annotation: valid_annotations,
-                                                       keep_probability: 1.0})
-                print("%s ---> Validation_loss: %g" % (datetime.datetime.now(), valid_loss))
-                saver.save(sess, LOG_DIR + "model.ckpt", itr)
+                valid_loss, valid_acc, summary_str = sess.run([loss, pixel_acc, summary_op], feed_dict=valid_feed_dict)
+                print("%s ---> Validation_loss:%g, Validation_acc:%g" % (datetime.datetime.now(), valid_loss, valid_acc))
+                writer_valid.add_summary(summary_str, step)
+                
+                
 
     elif mode == "visualize":
         valid_images, valid_annotations = validation_dataset_reader.get_random_batch(BATCH_SIZE)
@@ -265,7 +289,6 @@ def main(mode, data_dir):
 
 
 if __name__ == "__main__":
-    print(os.getcwd()+"/Model_zoo/")
     parser = argparse.ArgumentParser(description='Scene Segmentation')
     parser.add_argument('--dataset',type=str,help='Specify the directory of dataset')
     parser.add_argument('--mode',type=str,required=True,help='Specify the mode (train, visualize)')
