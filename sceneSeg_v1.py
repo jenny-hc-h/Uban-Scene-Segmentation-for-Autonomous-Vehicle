@@ -263,7 +263,6 @@ def main(mode, data_dir):
                 train_loss, train_acc, summary_str = sess.run([loss, pixel_acc, summary_op], feed_dict=feed_dict)
                 print("Step: %d, Train_loss:%g, Train_acc:%g" % (step, train_loss, train_acc))
                 writer_train.add_summary(summary_str, step)
-                saver.save(sess, LOG_DIR + "model.ckpt", global_step=global_step)
 
             if itr % 100 == 0:
                 valid_feed_dict = {image: valid_images, annotation: valid_annotations, keep_probability: 1.0}
@@ -271,8 +270,7 @@ def main(mode, data_dir):
                 valid_loss, valid_acc, summary_str = sess.run([loss, pixel_acc, summary_op], feed_dict=valid_feed_dict)
                 print("%s ---> Validation_loss:%g, Validation_acc:%g" % (datetime.datetime.now(), valid_loss, valid_acc))
                 writer_valid.add_summary(summary_str, step)
-                
-                
+                saver.save(sess, LOG_DIR + "model.ckpt", global_step=global_step)
 
     elif mode == "visualize":
         valid_images, valid_annotations = validation_dataset_reader.get_random_batch(BATCH_SIZE)
