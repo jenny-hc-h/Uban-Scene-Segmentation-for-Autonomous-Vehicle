@@ -19,9 +19,8 @@ from os.path import dirname
 Reference: https://github.com/shekkizh/FCN.tensorflow
 python /Users/JennyH/Desktop/Jenny/UCSD/HW/MachineLearning/Final_Project/sceneSeg_v1.py --dataset /Users/JennyH/Desktop/Jenny/UCSD/HW/MachineLearning/Final_Project/CityscapesDataset --mode train
 
-1. visualize mode : input an image and output a predict result(RGB)
-2. extract one of the convolution layer and add it to the final layer -> predict (refer the paper)
-3. implement AlexNet & GoogleNet
+1. extract one of the convolution layer and add it to the final layer -> predict (refer the paper)
+2. implement AlexNet & GoogleNet
 
 """
 
@@ -31,14 +30,14 @@ LOG_DIR = dirname(__file__)+'/logs/VGGNet/'
 
 MAX_ITERATION = int(1e5 + 1)
 LEARNING_RATE = 0.0001
-BATCH_SIZE = 1
+BATCH_SIZE = 10
 NUM_OF_CLASSES = 19 #maximum 19
 RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(190,153,153),
                 5:(153,153,153),6:(250,170,30),7:(220,220,0),8:(107,142,35),9:(152,251,152),
                 10:(70,130,180),11:(220,20,60),12:(255,0,0),13:(0,0,142),14:(0,0,70),
                 15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
-N_EXAMPLE = 10 # maximum 3475
-N_TRAINING_DATA = 8
+N_EXAMPLE = 1000 # maximum 3475
+N_TRAINING_DATA = 900
 IMSIZE_X = 256
 IMSIZE_Y = 512
 
@@ -252,13 +251,18 @@ def main(mode, data_dir, image_path):
 
     elif mode == "visualize":
         org_image = np.array(spmi.imresize(Image.open(image_path),(IMSIZE_X,IMSIZE_Y,3), interp='bilinear'))
-        lab_image = sess.run(pred_annotation, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
-        lab_image = np.squeeze(np.squeeze(lab_image, axis=3), axis=0)
-        
+        #lab_image = sess.run(pred_annotation, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
+        #lab_image = np.squeeze(np.squeeze(lab_image, axis=3), axis=0)
+        pred = sess.run(pred_annotation, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
+        pred = np.squeeze(np.squeeze(pred, axis=3), axis=0)
+        lab_image = np.zeros((IMSIZE_X,IMSIZE_Y,3))
+        for i in range(NUM_OF_CLASSES):
+            lab_image[pred==i] = RGB_OF_CLASSES[i]
+
         fig, ax = plt.subplots(1, 1)
         plt.axis('off')
         ax.imshow(org_image)
-        ax.imshow(lab_image, alpha=0.35)
+        ax.imshow(lab_image, alpha=0.5)
         dir_path = dirname(__file__)+'/Results/'
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
