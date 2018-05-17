@@ -265,8 +265,8 @@ def main(mode, data_dir):
                 writer_train.add_summary(summary_str, step)
 
             if itr % 100 == 0:
-                valid_feed_dict = {image: valid_images, annotation: valid_annotations, keep_probability: 1.0}
                 valid_images, valid_annotations = validation_dataset_reader.next_batch(BATCH_SIZE)
+                valid_feed_dict = {image: valid_images, annotation: valid_annotations, keep_probability: 1.0}
                 valid_loss, valid_acc, summary_str = sess.run([loss, pixel_acc, summary_op], feed_dict=valid_feed_dict)
                 print("%s ---> Validation_loss:%g, Validation_acc:%g" % (datetime.datetime.now(), valid_loss, valid_acc))
                 writer_valid.add_summary(summary_str, step)
