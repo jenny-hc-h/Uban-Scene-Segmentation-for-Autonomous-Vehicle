@@ -4,11 +4,11 @@ import TensorflowUtils as utils
 from six.moves import xrange
 from PIL import Image
 import matplotlib.pyplot as plt
-import scipy.misc as spmi
 import scipy.io as spio
 import tensorflow as tf
 import numpy as np
 import argparse
+import scipy.misc as spmi
 import datetime
 import glob 
 import tqdm
@@ -17,7 +17,10 @@ from os.path import dirname
 
 """
 Reference: https://github.com/shekkizh/FCN.tensorflow
-python /Users/JennyH/Desktop/Jenny/UCSD/HW/MachineLearning/Final_Project/sceneSeg_v1.py --dataset /Users/JennyH/Desktop/Jenny/UCSD/HW/MachineLearning/Final_Project/CityscapesDataset --mode train
+Training:
+    python sceneSeg.py --mode train --dataset DATASET_DIR
+Visualization:
+    python sceneSeg.py --mode visualize --image IMAGE_PATH
 
 1. extract one of the convolution layer and add it to the final layer -> predict (refer the paper)
 2. implement AlexNet & GoogleNet
@@ -28,7 +31,7 @@ N_EXAMPLE = 1000 # maximum 3475
 N_TRAINING_DATA = 900
 LEARNING_RATE = 0.0001
 BATCH_SIZE = 10
-TRAIN_CLASSES = [11, 12, 13, 14, 15, 17, 18] # max: range(19)
+TRAIN_CLASSES = [11,13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
@@ -39,9 +42,9 @@ LOG_DIR = dirname(__file__)+'/logs/VGGNet_c'+str(NUM_OF_CLASSES)+'/'
 MAX_ITERATION = int(1e5 + 1)
 IMSIZE_X = 256
 IMSIZE_Y = 512
-RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(190,153,153),
-                5:(153,153,153),6:(250,170,30),7:(220,220,0),8:(107,142,35),9:(152,251,152),
-                10:(70,130,180),11:(220,20,60),12:(255,0,0),13:(0,0,142),14:(0,0,70),
+RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(190,153,153), 
+                5:(153,153,153),6:(250,170,30),7:(220,220,0),8:(107,142,35),9:(152,251,152), 
+                10:(70,130,180),11:(220,20,60),12:(255,0,0),13:(0,0,142),14:(0,0,70), 
                 15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
 
 
@@ -57,11 +60,9 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
     imageset = []
     im_fpath = glob.glob(dataset_path+"/leftImg8bit/*.png")
     for n in tqdm.tqdm(range(0,N_examples)):
-        # load labels --- N x H x W x C(20)
+        # load labels --- N x H x W x (C+1)
         lb_fn = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
         lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
-        #lab_other = (np.sum(lab[:,:,0:NUM_OF_CLASSES], axis=2)==0).astype(int)
-        #labelset.append(np.concatenate((lab[:,:,0:NUM_OF_CLASSES],np.expand_dims(lab_other, axis=2)),axis=2))
         lab_other = (np.sum(lab[:,:,np.array(TRAIN_CLASSES)], axis=2)==0).astype(int)
         labelset.append(np.concatenate((lab[:,:,np.array(TRAIN_CLASSES)],np.expand_dims(lab_other, axis=2)),axis=2))
         
@@ -173,7 +174,7 @@ def inference(image, keep_prob):
 
         annotation_pred = tf.argmax(conv_t3, dimension=3, name="prediction")
 
-    return tf.expand_dims(annotation_pred+1, dim=3), conv_t3
+    return tf.expand_dims(annotation_pred, dim=3), conv_t3
 
 
 def train(loss_val, var_list, g_step):
@@ -188,19 +189,22 @@ def main(mode, data_dir, image_path):
     if mode == 'train':
         annotation = tf.placeholder(tf.float32, shape=[None, IMSIZE_X, IMSIZE_Y, NUM_OF_CLASSES+1], name="annotation")
 
-    pred_annotation, logits = inference(image, keep_probability)
+    pred_label, logits = inference(image, keep_probability)
 
     if mode == 'train':
         tf.summary.image("input_image", image, max_outputs=2)
-        gt_lab = tf.expand_dims(tf.argmax(annotation, axis=3)+1,dim=3)
-        tf.summary.image("ground_truth", tf.cast(gt_lab*255/19, tf.uint8), max_outputs=2)
-        tf.summary.image("pred_annotation", tf.cast(pred_annotation*255/19, tf.uint8), max_outputs=2)
+        gt_label = tf.expand_dims(tf.argmax(annotation, axis=3),dim=3)
+        tf.summary.image("ground_truth", tf.cast(gt_label*255/NUM_OF_CLASSES, tf.uint8), max_outputs=2)
+        tf.summary.image("pred_label", tf.cast(pred_label*255/NUM_OF_CLASSES, tf.uint8), max_outputs=2)
+        
         # Compute loss
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits,labels=annotation,name="entropy"))
         tf.summary.scalar("entropy_loss", loss)
 
         # Compute accuracy
-        pixel_acc = tf.div(tf.reduce_sum(tf.cast(tf.equal(gt_lab,pred_annotation), tf.float32)),tf.cast(tf.reduce_sum(annotation), tf.float32))
+        mask = tf.cast(tf.not_equal(gt_label,NUM_OF_CLASSES), tf.float32)
+        pixel_acc = tf.div(tf.reduce_sum(tf.multiply(tf.cast(tf.equal(gt_label, pred_label), tf.float32), mask)), tf.cast(tf.reduce_sum(mask), tf.float32))
+        #pixel_acc = tf.div(tf.reduce_sum(tf.cast(tf.equal(gt_label,pred_label), tf.float32)),tf.cast(tf.reduce_sum(annotation), tf.float32))
         tf.summary.scalar("pixel_accuracy", pixel_acc)
 
         trainable_var = tf.trainable_variables()
@@ -255,13 +259,11 @@ def main(mode, data_dir, image_path):
 
     elif mode == "visualize":
         org_image = np.array(spmi.imresize(Image.open(image_path),(IMSIZE_X,IMSIZE_Y,3), interp='bilinear'))
-        #lab_image = sess.run(pred_annotation, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
-        #lab_image = np.squeeze(np.squeeze(lab_image, axis=3), axis=0)
-        pred = sess.run(pred_annotation, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
+        pred = sess.run(pred_label, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
         pred = np.squeeze(np.squeeze(pred, axis=3), axis=0)
         lab_image = np.zeros((IMSIZE_X,IMSIZE_Y,3))
         for i in range(NUM_OF_CLASSES):
-            lab_image[pred==i] = RGB_OF_CLASSES[i]
+            lab_image[pred==i] = RGB_OF_CLASSES[TRAIN_CLASSES[i]]
 
         fig, ax = plt.subplots(1, 1)
         plt.axis('off')
