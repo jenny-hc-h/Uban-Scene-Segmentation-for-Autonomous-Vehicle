@@ -28,7 +28,7 @@ N_EXAMPLE = 1000 # maximum 3475
 N_TRAINING_DATA = 900
 LEARNING_RATE = 0.0001
 BATCH_SIZE = 10
-TRAIN_CLASSES = range(19) #[0, 11, 13] # max: range(19)
+TRAIN_CLASSES = [11, 12, 13, 14, 15, 17, 18] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 MODEL_URL = 'http://www.vlfeat.org/matconvnet/models/beta16/imagenet-vgg-verydeep-19.mat'
@@ -60,10 +60,10 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
         # load labels --- N x H x W x C(20)
         lb_fn = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
         lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
-        lab_other = (np.sum(lab[:,:,0:NUM_OF_CLASSES], axis=2)==0).astype(int)
-        labelset.append(np.concatenate((lab[:,:,0:NUM_OF_CLASSES],np.expand_dims(lab_other, axis=2)),axis=2))
-        #lab_other = (np.sum(lab[:,:,np.array(TRAIN_CLASSES)], axis=2)==0).astype(int)
-        #labelset.append(np.concatenate((lab[:,:,np.array(TRAIN_CLASSES)],np.expand_dims(lab_other, axis=2)),axis=2))
+        #lab_other = (np.sum(lab[:,:,0:NUM_OF_CLASSES], axis=2)==0).astype(int)
+        #labelset.append(np.concatenate((lab[:,:,0:NUM_OF_CLASSES],np.expand_dims(lab_other, axis=2)),axis=2))
+        lab_other = (np.sum(lab[:,:,np.array(TRAIN_CLASSES)], axis=2)==0).astype(int)
+        labelset.append(np.concatenate((lab[:,:,np.array(TRAIN_CLASSES)],np.expand_dims(lab_other, axis=2)),axis=2))
         
         # load images --- N x H x W x 3
         image = Image.open(im_fpath[n])
@@ -206,7 +206,7 @@ def main(mode, data_dir, image_path):
         trainable_var = tf.trainable_variables()
 
         global_step = tf.Variable(0, name='global_step', trainable=False)
-        train_op = train(loss, trainable_var,global_step)
+        train_op = train(loss, trainable_var, global_step)
 
         print("Setting up summary op...")
         summary_op = tf.summary.merge_all()
