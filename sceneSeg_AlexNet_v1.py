@@ -27,15 +27,16 @@ Visualization:
 
 """
 # ==========================================================================================
-N_EXAMPLE = 200 # maximum 3475
-N_TRAINING_DATA = 150
+N_EXAMPLE = 100 # maximum 3475
+N_TRAINING_DATA = 90
 LEARNING_RATE = 0.0001
-BATCH_SIZE = 1
+BATCH_SIZE = 2
 SCALE_OF_REGULARIZATION = 0.00001
-TRAIN_CLASSES = [11, 12, 13, 14, 15, 17, 18] # max: range(19)
+TRAIN_CLASSES = [0, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 LOG_DIR = dirname(__file__)+'/logs/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
+RESULT_DIR = dirname(__file__)+'/Results/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
 
 MAX_ITERATION = int(1e5 + 1)
@@ -239,10 +240,7 @@ def main(mode, data_dir, image_path):
         plt.axis('off')
         ax.imshow(org_image)
         ax.imshow(lab_image, alpha=0.5)
-        dir_path = dirname(__file__)+'/Results/'
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        fig.savefig(dir_path + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
+        fig.savefig(RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
         print("Saved image : " + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
 
 
@@ -257,6 +255,9 @@ if __name__ == "__main__":
     if (args.mode == 'visualize') and (args.image is None):
         parser.error('--visualize requires --image')
 
+    # Create folders
+    if not os.path.exists(RESULT_DIR):
+            os.makedirs(RESULT_DIR)
 
     main(mode=args.mode, data_dir=args.dataset, image_path=args.image)
     #tf.app.run()
