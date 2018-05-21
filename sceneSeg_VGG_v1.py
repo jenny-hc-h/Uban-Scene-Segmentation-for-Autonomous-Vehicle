@@ -312,10 +312,10 @@ def main(mode, data_dir, image_path, image_dir):
             print("Saved image : " + RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
 
         if image_dir is not None:
-            if not os.path.exists(image_dir+'/Results/'):
-                os.makedirs(image_dir+'/Results/')
+            if not os.path.exists(image_dir+'/Results_VGG_c'+str(NUM_OF_CLASSES)+'/'):
+                os.makedirs(image_dir+'/Results_VGG_c'+str(NUM_OF_CLASSES)+'/')
             for fname in os.listdir(image_dir):
-                if os.path.splitext(fname)[-1]=='.jpg':
+                if (os.path.splitext(fname)[-1]=='.jpg') or (os.path.splitext(fname)[-1]=='.png'):
                     f = os.path.join(image_dir,fname)
                     org_image = np.array(spmi.imresize(Image.open(f),(IMSIZE_X,IMSIZE_Y,3), interp='bilinear'))
                     pred = sess.run(pred_label, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
@@ -328,8 +328,8 @@ def main(mode, data_dir, image_path, image_dir):
                     plt.axis('off')
                     ax.imshow(org_image)
                     ax.imshow(lab_image, alpha=0.5)
-                    fig.savefig(image_dir+'/Results/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
-                    print("Saved image : " + args.imagedir + '/Results/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png')
+                    fig.savefig(image_dir+'/Results_VGG_c'+str(NUM_OF_CLASSES)+'/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
+                    print("Saved image : " + args.imagedir + '/Results_VGG_c'+str(NUM_OF_CLASSES)+'/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png')
 
 
 if __name__ == "__main__":

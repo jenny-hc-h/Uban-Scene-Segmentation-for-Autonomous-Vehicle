@@ -156,7 +156,7 @@ def train(loss_val, var_list, g_step):
     return optimizer.apply_gradients(grads, global_step=g_step)
 
 
-def main(mode, data_dir, image_path):
+def main(mode, data_dir, image_path, image_dir):
     keep_probability = tf.placeholder(tf.float32, name="keep_probabilty")
     image = tf.placeholder(tf.float32, shape=[None, IMSIZE_X, IMSIZE_Y, 3], name="input_image")
     if mode == 'train':
@@ -229,19 +229,40 @@ def main(mode, data_dir, image_path):
                 saver.save(sess, LOG_DIR + "model.ckpt", global_step=global_step)
 
     elif mode == "visualize":
-        org_image = np.array(spmi.imresize(Image.open(image_path),(IMSIZE_X,IMSIZE_Y,3), interp='bilinear'))
-        pred = sess.run(pred_label, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
-        pred = np.squeeze(np.squeeze(pred, axis=3), axis=0)
-        lab_image = np.zeros((IMSIZE_X,IMSIZE_Y,3))
-        for i in range(NUM_OF_CLASSES):
-            lab_image[pred==i] = RGB_OF_CLASSES[TRAIN_CLASSES[i]]
+        if image_path is not None:
+            org_image = np.array(spmi.imresize(Image.open(image_path),(IMSIZE_X,IMSIZE_Y,3), interp='bilinear'))
+            pred = sess.run(pred_label, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
+            pred = np.squeeze(np.squeeze(pred, axis=3), axis=0)
+            lab_image = np.zeros((IMSIZE_X,IMSIZE_Y,3))
+            for i in range(NUM_OF_CLASSES):
+                lab_image[pred==i] = RGB_OF_CLASSES[TRAIN_CLASSES[i]]
 
-        fig, ax = plt.subplots(1, 1)
-        plt.axis('off')
-        ax.imshow(org_image)
-        ax.imshow(lab_image, alpha=0.5)
-        fig.savefig(RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
-        print("Saved image : " + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
+            fig, ax = plt.subplots(1, 1)
+            plt.axis('off')
+            ax.imshow(org_image)
+            ax.imshow(lab_image, alpha=0.5)
+            fig.savefig(RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
+            print("Saved image : " + RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
+
+        if image_dir is not None:
+            if not os.path.exists(image_dir+'/Results_Alex_c'+str(NUM_OF_CLASSES)+'/'):
+                os.makedirs(image_dir+'/Results_Alex_c'+str(NUM_OF_CLASSES)+'/')
+            for fname in os.listdir(image_dir):
+                if (os.path.splitext(fname)[-1]=='.jpg') or (os.path.splitext(fname)[-1]=='.png'):
+                    f = os.path.join(image_dir,fname)
+                    org_image = np.array(spmi.imresize(Image.open(f),(IMSIZE_X,IMSIZE_Y,3), interp='bilinear'))
+                    pred = sess.run(pred_label, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
+                    pred = np.squeeze(np.squeeze(pred, axis=3), axis=0)
+                    lab_image = np.zeros((IMSIZE_X,IMSIZE_Y,3))
+                    for i in range(NUM_OF_CLASSES):
+                        lab_image[pred==i] = RGB_OF_CLASSES[TRAIN_CLASSES[i]]
+
+                    fig, ax = plt.subplots(1, 1)
+                    plt.axis('off')
+                    ax.imshow(org_image)
+                    ax.imshow(lab_image, alpha=0.5)
+                    fig.savefig(image_dir+'/Results_Alex_c'+str(NUM_OF_CLASSES)+'/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
+                    print("Saved image : " + args.imagedir + '/Results_Alex_c'+str(NUM_OF_CLASSES)+'/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png')
 
 
 if __name__ == "__main__":
@@ -249,18 +270,24 @@ if __name__ == "__main__":
     parser.add_argument('--mode',type=str,required=True,help='Specify the mode (train, visualize)')
     parser.add_argument('--dataset',type=str,help='Specify the directory of dataset')
     parser.add_argument('--image',type=str,help='Path to the image file')
+    parser.add_argument('--imagedir',type=str,help='Directory to the image folder')
     args = parser.parse_args()
     if (args.mode == 'train') and (args.dataset is None):
         parser.error('--train requires --dataset')
-    if (args.mode == 'visualize') and (args.image is None):
-        parser.error('--visualize requires --image')
+    if (args.mode == 'visualize') and ((args.image is None) and (args.imagedir is None)):
+        parser.error('--visualize requires --image/--imagedir')
 
     # Create folders
     if not os.path.exists(RESULT_DIR):
-            os.makedirs(RESULT_DIR)
+        os.makedirs(RESULT_DIR)
 
-    main(mode=args.mode, data_dir=args.dataset, image_path=args.image)
+    main(mode=args.mode, data_dir=args.dataset, image_path=args.image, image_dir=args.imagedir)
     #tf.app.run()
+
+
+    
+
+
 
 
     
