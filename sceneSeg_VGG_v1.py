@@ -308,7 +308,7 @@ def main(mode, data_dir, image_path, image_dir):
             plt.axis('off')
             ax.imshow(org_image)
             ax.imshow(lab_image, alpha=0.5)
-            fig.savefig(RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
+            fig.savefig(RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
             print("Saved image : " + RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
 
         if image_dir is not None:
@@ -328,7 +328,7 @@ def main(mode, data_dir, image_path, image_dir):
                     plt.axis('off')
                     ax.imshow(org_image)
                     ax.imshow(lab_image, alpha=0.5)
-                    fig.savefig(image_dir+'/Results/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png')
+                    fig.savefig(image_dir+'/Results/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
                     print("Saved image : " + args.imagedir + '/Results/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png')
 
 
