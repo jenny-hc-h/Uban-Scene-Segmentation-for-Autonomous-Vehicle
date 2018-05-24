@@ -1,6 +1,5 @@
 from __future__ import print_function
 import BatchDatsetReader as batchreader
-#import TensorflowUtils as utils
 from six.moves import xrange
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -35,7 +34,7 @@ TRAIN_CLASSES = [0, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 LOG_DIR = dirname(__file__)+'/logs/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
-RESULT_DIR = dirname(__file__)+'/Results/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
+RESULT_DIR = '/Results/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
 
 MAX_ITERATION = int(1e5 + 1)
@@ -249,6 +248,8 @@ def main(mode, data_dir, image_path, image_dir):
 
     elif mode == "visualize":
         if image_path is not None:
+            if not os.path.exists(dirname(__file__) + RESULT_DIR):
+                os.makedirs(dirname(__file__) + RESULT_DIR)
             org_image = np.array(spmi.imresize(Image.open(image_path),(IMSIZE_X,IMSIZE_Y,3), interp='bilinear'))
             pred = sess.run(pred_label, feed_dict={image: np.expand_dims(org_image, axis=0), keep_probability: 1.0})
             pred = np.squeeze(np.squeeze(pred, axis=3), axis=0)
@@ -260,12 +261,12 @@ def main(mode, data_dir, image_path, image_dir):
             plt.axis('off')
             ax.imshow(org_image)
             ax.imshow(lab_image, alpha=0.5)
-            fig.savefig(RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
-            print("Saved image : " + RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
+            fig.savefig(dirname(__file__) + RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
+            print("Saved image : " + dirname(__file__) + RESULT_DIR + os.path.splitext(image_path.split('/')[-1])[0] + '_seg.png')
 
         if image_dir is not None:
-            if not os.path.exists(image_dir+'/Results_Alex_c'+str(NUM_OF_CLASSES)+'/'):
-                os.makedirs(image_dir+'/Results_Alex_c'+str(NUM_OF_CLASSES)+'/')
+            if not os.path.exists(image_dir+RESULT_DIR):
+                os.makedirs(image_dir+RESULT_DIR)
             for fname in os.listdir(image_dir):
                 if (os.path.splitext(fname)[-1]=='.jpg') or (os.path.splitext(fname)[-1]=='.png'):
                     f = os.path.join(image_dir,fname)
@@ -280,8 +281,8 @@ def main(mode, data_dir, image_path, image_dir):
                     plt.axis('off')
                     ax.imshow(org_image)
                     ax.imshow(lab_image, alpha=0.5)
-                    fig.savefig(image_dir+'/Results_Alex_c'+str(NUM_OF_CLASSES)+'/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
-                    print("Saved image : " + args.imagedir + '/Results_Alex_c'+str(NUM_OF_CLASSES)+'/' + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png')
+                    fig.savefig(image_dir + RESULT_DIR + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png',dpi=200, transparent=True)
+                    print("Saved image : " + args.imagedir + RESULT_DIR + os.path.splitext(fname.split('/')[-1])[0] + '_seg.png')
 
 
 if __name__ == "__main__":
@@ -296,9 +297,6 @@ if __name__ == "__main__":
     if (args.mode == 'visualize') and ((args.image is None) and (args.imagedir is None)):
         parser.error('--visualize requires --image/--imagedir')
 
-    # Create folders
-    if not os.path.exists(RESULT_DIR):
-        os.makedirs(RESULT_DIR)
 
     main(mode=args.mode, data_dir=args.dataset, image_path=args.image, image_dir=args.imagedir)
     #tf.app.run()
