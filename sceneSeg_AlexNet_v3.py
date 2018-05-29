@@ -26,12 +26,12 @@ Visualization:
 
 """
 # ==========================================================================================
-N_EXAMPLE = 1200 # maximum 3475
-N_TRAINING_DATA = 1000
+N_EXAMPLE = 15000 # maximum 19000
+N_TRAINING_DATA = 13500
 LEARNING_RATE = 0.0001
 REGULARIZATION_SCLAE = 0.00001
-BATCH_SIZE = 5
-TRAIN_CLASSES = [0, 13] # max: range(19)
+BATCH_SIZE = 100
+TRAIN_CLASSES = range(19) #[0, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 LOG_DIR = dirname(__file__)+'/logs/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
@@ -53,7 +53,7 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
     0: road   1: sidewalk        2: building       3: wall         4: fence
     5: pole   6: traffic light   7: traffic sign   8: vegetation   9: terrain
     10: sky   11: person         12: rider         13: car         14: trunck   
-    15: bus   16: train          17: motorcycle    18: bicycle     19: others
+    15: bus   16: train          17: motorcycle    18: bicycle     
      """
     labelset = []
     imageset = []
@@ -61,7 +61,11 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
     for n in tqdm.tqdm(range(0,N_examples)):
         # load labels --- N x H x W x C(20)
         lb_fn = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
-        lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
+        lb_fn1 = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtCoarse_color.mat'
+        if os.path.exists(dataset_path+"/gtFine/"+lb_fn):
+        	lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
+        else:
+        	lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn1)['label'])
         lab_other = (np.sum(lab[:,:,np.array(TRAIN_CLASSES)], axis=2)==0).astype(int)
         labelset.append(np.concatenate((lab[:,:,np.array(TRAIN_CLASSES)],np.expand_dims(lab_other, axis=2)),axis=2))
         

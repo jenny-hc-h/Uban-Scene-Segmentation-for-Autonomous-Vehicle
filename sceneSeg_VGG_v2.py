@@ -47,21 +47,25 @@ RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(
                 15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
 
 
-def load_dataset(dataset_path,N_examples,N_traingdata):
+ddef load_dataset(dataset_path,N_examples,N_traingdata):
     """
     Cityscapes Dataset : https://www.cityscapes-dataset.com/
     0: road   1: sidewalk        2: building       3: wall         4: fence
     5: pole   6: traffic light   7: traffic sign   8: vegetation   9: terrain
     10: sky   11: person         12: rider         13: car         14: trunck   
-    15: bus   16: train          17: motorcycle    18: bicycle     19: others
+    15: bus   16: train          17: motorcycle    18: bicycle     
      """
     labelset = []
     imageset = []
     im_fpath = glob.glob(dataset_path+"/leftImg8bit/*.png")
     for n in tqdm.tqdm(range(0,N_examples)):
-        # load labels --- N x H x W x (C+1)
+        # load labels --- N x H x W x C(20)
         lb_fn = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
-        lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
+        lb_fn1 = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtCoarse_color.mat'
+        if os.path.exists(dataset_path+"/gtFine/"+lb_fn):
+            lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
+        else:
+            lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn1)['label'])
         lab_other = (np.sum(lab[:,:,np.array(TRAIN_CLASSES)], axis=2)==0).astype(int)
         labelset.append(np.concatenate((lab[:,:,np.array(TRAIN_CLASSES)],np.expand_dims(lab_other, axis=2)),axis=2))
         
@@ -76,6 +80,7 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
     test_labels = np.array(labelset[N_traingdata:N_examples])
     print(train_data.shape, train_labels.shape)
     return {"train_data":train_data, "test_data": test_data, "train_labels": train_labels, "test_labels": test_labels}
+
 
 def inference(image, keep_prob):
     """
