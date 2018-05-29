@@ -27,11 +27,11 @@ Visualization:
 """
 # ==========================================================================================
 N_EXAMPLE = 1200 # maximum 3475
-N_TRAINING_DATA = 1000
+N_TRAINING_DATA = 1080
 LEARNING_RATE = 0.0001
 REGULARIZATION_SCLAE = 0.00001
 BATCH_SIZE = 5
-TRAIN_CLASSES = [0,13] # max: range(19)
+TRAIN_CLASSES = [0, 2, 8, 11, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 LOG_DIR = dirname(__file__)+'/logs/VGG_c'+str(NUM_OF_CLASSES)+'/'
@@ -47,7 +47,7 @@ RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(
                 15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
 
 
-ddef load_dataset(dataset_path,N_examples,N_traingdata):
+def load_dataset(dataset_path,N_examples,N_traingdata):
     """
     Cityscapes Dataset : https://www.cityscapes-dataset.com/
     0: road   1: sidewalk        2: building       3: wall         4: fence
@@ -217,9 +217,7 @@ def inference(image, keep_prob):
         conv_t3 = tf.nn.bias_add(tf.nn.conv2d_transpose(skip_2, W_t3, output_shape=deconv_shape3, strides=[1, 8, 8, 1], padding="SAME"), b_t3)
 
         annotation_pred = tf.argmax(conv_t3, dimension=3, name="prediction")
-        reg_loss = tf.nn.l2_loss(W1_1)+tf.nn.l2_loss(W1_2)+tf.nn.l2_loss(W2_1)+tf.nn.l2_loss(W2_2)+tf.nn.l2_loss(W3_1)+tf.nn.l2_loss(W3_2)+tf.nn.l2_loss(W3_3)+tf.nn.l2_loss(W3_4)
-                    +tf.nn.l2_loss(W4_1)+tf.nn.l2_loss(W4_2)+tf.nn.l2_loss(W4_3)+tf.nn.l2_loss(W4_4)+tf.nn.l2_loss(W5_1)+tf.nn.l2_loss(W5_2)+tf.nn.l2_loss(W5_3)+tf.nn.l2_loss(W5_4)
-                    +tf.nn.l2_loss(W5_1)+tf.nn.l2_loss(W6)+tf.nn.l2_loss(W7)+tf.nn.l2_loss(W8)
+        reg_loss = tf.nn.l2_loss(W1_1)+tf.nn.l2_loss(W1_2)+tf.nn.l2_loss(W2_1)+tf.nn.l2_loss(W2_2)+tf.nn.l2_loss(W3_1)+tf.nn.l2_loss(W3_2)+tf.nn.l2_loss(W3_3)+tf.nn.l2_loss(W3_4)+tf.nn.l2_loss(W4_1)+tf.nn.l2_loss(W4_2)+tf.nn.l2_loss(W4_3)+tf.nn.l2_loss(W4_4)+tf.nn.l2_loss(W5_1)+tf.nn.l2_loss(W5_2)+tf.nn.l2_loss(W5_3)+tf.nn.l2_loss(W5_4)+tf.nn.l2_loss(W5_1)+tf.nn.l2_loss(W6)+tf.nn.l2_loss(W7)+tf.nn.l2_loss(W8)
 
     return tf.expand_dims(annotation_pred, dim=3), conv_t3, reg_loss
 
