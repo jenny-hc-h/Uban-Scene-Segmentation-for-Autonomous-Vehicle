@@ -27,10 +27,10 @@ Visualization:
 
 """
 # ==========================================================================================
-N_EXAMPLE = 100 # maximum 3475
-N_TRAINING_DATA = 90
+N_EXAMPLE = 1200 # maximum 3475
+N_TRAINING_DATA = 1000
 LEARNING_RATE = 0.0001
-BATCH_SIZE = 2
+BATCH_SIZE = 5
 SCALE_OF_REGULARIZATION = 0.00001
 TRAIN_CLASSES = [0, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
@@ -61,8 +61,12 @@ def load_dataset(dataset_path,N_examples,N_traingdata):
     im_fpath = glob.glob(dataset_path+"/leftImg8bit/*.png")
     for n in tqdm.tqdm(range(0,N_examples)):
         # load labels --- N x H x W x C(20)
-        lb_fn = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
-        lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
+        #lb_fn = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
+        lb_fn1 = os.path.splitext(im_fpath[n].split('/')[-1])[0][0:-12] + '_gtCoarse_color.mat'
+        #if os.path.exists(dataset_path+"/gtFine/"+lb_fn):
+        #   lab = np.array(spio.loadmat(dataset_path+"/gtFine/"+lb_fn)['label'])
+        #else:
+        lab = np.array(spio.loadmat(dataset_path+"/gtCoarse/"+lb_fn1)['label'])
         lab_other = (np.sum(lab[:,:,np.array(TRAIN_CLASSES)], axis=2)==0).astype(int)
         labelset.append(np.concatenate((lab[:,:,np.array(TRAIN_CLASSES)],np.expand_dims(lab_other, axis=2)),axis=2))
         
@@ -126,22 +130,39 @@ def inference(image, keep_prob):
         # Pooling Layer 5
         pool5 = tf.nn.max_pool(relu_dropout5, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool5')
 
+        # Convolutional Layer 6
+        W6 = tf.get_variable(name='W6', initializer=tf.truncated_normal(shape=[1,1,256,2048], stddev=0.02))
+        b6 = tf.get_variable(name='b6', initializer=tf.constant(0.0, shape=[2048]))
+        conv6 = tf.nn.bias_add(tf.nn.conv2d(pool5, W6, strides=[1, 1, 1, 1], padding="SAME"), b6)
+        relu_dropout6 = tf.nn.dropout(tf.nn.relu(conv6, name="relu6"), keep_prob=keep_prob)
+
+        # Convolutional Layer 7
+        W7 = tf.get_variable(name='W7', initializer=tf.truncated_normal(shape=[1,1,2048,2048], stddev=0.02))
+        b7 = tf.get_variable(name='b7', initializer=tf.constant(0.0, shape=[2048]))
+        conv7 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout6, W7, strides=[1, 1, 1, 1], padding="SAME"), b7)
+        relu_dropout7 = tf.nn.dropout(tf.nn.relu(conv7, name="relu7"), keep_prob=keep_prob)
+        
+        # Convolutional Layer 8
+        W8 = tf.get_variable(name='W8', initializer=tf.truncated_normal(shape=[1,1,2048,NUM_OF_CLASSES+1], stddev=0.02))
+        b8 = tf.get_variable(name='b8', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
+        conv8 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout7, W8, strides=[1, 1, 1, 1], padding="SAME"), b8)
+
 
         # ---------------------------------------- UPSAMPLING ---------------------------------------- 
         # Deconvolution Layer 1
-        W_t1 = tf.get_variable(name='W_t1', initializer=tf.truncated_normal(shape=[3, 3, 256, 256], stddev=0.02))
-        b_t1 = tf.get_variable(name='b_t1', initializer=tf.constant(0.0, shape=[256]))
-        conv_t1 = tf.nn.bias_add(tf.nn.conv2d_transpose(pool5, W_t1, output_shape=tf.shape(pool2), strides=[1, 2, 2, 1], padding="SAME"), b_t1)
+        W_t1 = tf.get_variable(name='W_t1', initializer=tf.truncated_normal(shape=[3, 3, NUM_OF_CLASSES+1, NUM_OF_CLASSES+1], stddev=0.02))
+        b_t1 = tf.get_variable(name='b_t1', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
+        conv_t1 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv8, W_t1, output_shape=tf.shape(pool2), strides=[1, 2, 2, 1], padding="SAME"), b_t1)
         #fuse_1 = tf.add(conv_t1, image_net["pool4"], name="fuse_1")
 
         # Deconvolution Layer 2
-        W_t2 = tf.get_variable(name='W_t2', initializer=tf.truncated_normal(shape=[5, 5, 96, 256], stddev=0.02))
-        b_t2 = tf.get_variable(name='b_t2', initializer=tf.constant(0.0, shape=[96]))
+        W_t2 = tf.get_variable(name='W_t2', initializer=tf.truncated_normal(shape=[5, 5, NUM_OF_CLASSES+1, NUM_OF_CLASSES+1], stddev=0.02))
+        b_t2 = tf.get_variable(name='b_t2', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
         conv_t2 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv_t1, W_t2, output_shape=tf.shape(pool1), strides=[1, 2, 2, 1], padding="SAME"), b_t2)
 
         # Deconvolution Layer 3
         deconv_shape3 = tf.stack([tf.shape(image)[0], tf.shape(image)[1], tf.shape(image)[2], NUM_OF_CLASSES+1])
-        W_t3 = tf.get_variable(name='W_t3', initializer=tf.truncated_normal(shape=[11, 11, NUM_OF_CLASSES+1, 96], stddev=0.02))
+        W_t3 = tf.get_variable(name='W_t3', initializer=tf.truncated_normal(shape=[11, 11, NUM_OF_CLASSES+1, NUM_OF_CLASSES+1], stddev=0.02))
         b_t3 = tf.get_variable(name='b_t3', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
         conv_t3 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv_t2, W_t3, output_shape=deconv_shape3, strides=[1, 8, 8, 1], padding="SAME"), b_t3)
 
