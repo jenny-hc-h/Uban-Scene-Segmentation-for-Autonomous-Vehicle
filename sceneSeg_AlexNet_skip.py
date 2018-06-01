@@ -33,8 +33,8 @@ NUM_OF_EPOCHS = 1000
 TRAIN_CLASSES = range(19) #[0, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
-LOG_DIR = dirname(__file__)+'/logs/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
-RESULT_DIR = '/Results/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
+LOG_DIR = dirname(__file__)+'/logs/AlexNet_skip_c'+str(NUM_OF_CLASSES)+'/'
+RESULT_DIR = '/Results/AlexNet_skip_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
 
 MAX_ITERATION = int(1e5 + 1)
@@ -86,7 +86,7 @@ def inference(image, keep_prob):
     :param keep_prob:
     :return:
     """
-    print("setting up AlexNet ...")
+    print("setting up AlexNet with skip connection...")
 
     with tf.variable_scope("inference"):
         # ---------------------------------------- DOWNSAMPLING ---------------------------------------- 
@@ -238,7 +238,7 @@ def main(mode, data_dir, image_path, image_dir):
         print("Model restored...")
 
     if mode == "train":
-        #sess.run(val_itr.initializer)
+        sess.run(val_itr.initializer)
         train_handle, val_handle = sess.run([train_itr_handle, val_itr_handle])
         for itr in xrange(MAX_ITERATION):
             #feed_img, feed_lab = sess.run([img, ann], feed_dict={handle: train_handle})
