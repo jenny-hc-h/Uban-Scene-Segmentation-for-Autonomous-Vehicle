@@ -3,11 +3,11 @@ import BatchDatsetReader as batchreader
 from six.moves import xrange
 from PIL import Image
 import matplotlib.pyplot as plt
-import scipy.misc as spmi
 import scipy.io as spio
 import tensorflow as tf
 import numpy as np
 import argparse
+import scipy.misc as spmi
 import datetime
 import glob 
 import tqdm
@@ -25,12 +25,12 @@ Visualization:
 # ==========================================================================================
 LEARNING_RATE = 0.0001
 REGULARIZATION_SCLAE = 0.00001
-BATCH_SIZE = 10
-TRAIN_CLASSES = range(19) #[0, 13] # max: range(19)
+BATCH_SIZE = 5
+TRAIN_CLASSES = [0, 2, 8, 11, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
-LOG_DIR = dirname(__file__)+'/logs/AlexNet_skip_c'+str(NUM_OF_CLASSES)+'/'
-RESULT_DIR = '/Results/AlexNet_skip_c'+str(NUM_OF_CLASSES)+'/'
+LOG_DIR = dirname(__file__)+'/logs/VGG_skip_c'+str(NUM_OF_CLASSES)+'/'
+RESULT_DIR = '/Results/VGG_skip_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
 
 MAX_ITERATION = int(1e5 + 1)
@@ -40,12 +40,6 @@ RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(
                 5:(153,153,153),6:(250,170,30),7:(220,220,0),8:(107,142,35),9:(152,251,152),
                 10:(70,130,180),11:(220,20,60),12:(255,0,0),13:(0,0,142),14:(0,0,70),
                 15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
-
-""" Cityscapes Dataset : https://www.cityscapes-dataset.com/
-    0: road   1: sidewalk        2: building       3: wall         4: fence
-    5: pole   6: traffic light   7: traffic sign   8: vegetation   9: terrain
-    10: sky   11: person         12: rider         13: car         14: trunck   
-    15: bus   16: train          17: motorcycle    18: bicycle                  """
 
 def _read_py_function(im, lb_fpath):
     lab = np.array(spio.loadmat(lb_fpath)['label']).astype(np.float32)
@@ -82,94 +76,144 @@ def inference(image, keep_prob):
     :param keep_prob:
     :return:
     """
-    print("setting up AlexNet with skip connection...")
+    print("setting up VGG net with skip connection...")
 
     with tf.variable_scope("inference"):
         # ---------------------------------------- DOWNSAMPLING ---------------------------------------- 
         # Convolutional Layer 1
-        W1 = tf.get_variable(name='W1', initializer=tf.truncated_normal(shape=[11,11,3,96], stddev=0.02))
-        b1 = tf.get_variable(name='b1', initializer=tf.constant(0.0, shape=[96]))
-        conv1 = tf.nn.bias_add(tf.nn.conv2d(image, W1, strides=[1, 4, 4, 1], padding="SAME"), b1)
-        relu_dropout1 = tf.nn.dropout(tf.nn.relu(conv1, name="relu1"), keep_prob=keep_prob)
+        W1_1 = tf.get_variable(name='W1_1', initializer=tf.truncated_normal(shape=[3,3,3,64], stddev=0.02))
+        b1_1 = tf.get_variable(name='b1_1', initializer=tf.constant(0.0, shape=[64]))
+        conv1_1 = tf.nn.bias_add(tf.nn.conv2d(image, W1_1, strides=[1, 1, 1, 1], padding="SAME"), b1_1)
+        relu_dropout1_1 = tf.nn.dropout(tf.nn.relu(conv1_1, name="relu1_1"), keep_prob=keep_prob)
+        W1_2 = tf.get_variable(name='W1_2', initializer=tf.truncated_normal(shape=[3,3,64,64], stddev=0.02))
+        b1_2 = tf.get_variable(name='b1_2', initializer=tf.constant(0.0, shape=[64]))
+        conv1_2 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout1_1, W1_2, strides=[1, 1, 1, 1], padding="SAME"), b1_2)
+        relu_dropout1_2 = tf.nn.dropout(tf.nn.relu(conv1_2, name="relu1_2"), keep_prob=keep_prob)
         # Pooling Layer 1
-        pool1 = tf.nn.max_pool(relu_dropout1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool1')
+        pool1 = tf.nn.max_pool(relu_dropout1_2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool1')
 
         # Convolutional Layer 2
-        W2 = tf.get_variable(name='W2', initializer=tf.truncated_normal(shape=[5,5,96,256], stddev=0.02))
-        b2 = tf.get_variable(name='b2', initializer=tf.constant(0.0, shape=[256]))
-        conv2 = tf.nn.bias_add(tf.nn.conv2d(pool1, W2, strides=[1, 1, 1, 1], padding="SAME"), b2)
-        relu_dropout2 = tf.nn.dropout(tf.nn.relu(conv2, name="relu2"), keep_prob=keep_prob)
+        W2_1 = tf.get_variable(name='W2_1', initializer=tf.truncated_normal(shape=[3,3,64,128], stddev=0.02))
+        b2_1 = tf.get_variable(name='b2_1', initializer=tf.constant(0.0, shape=[128]))
+        conv2_1 = tf.nn.bias_add(tf.nn.conv2d(pool1, W2_1, strides=[1, 1, 1, 1], padding="SAME"), b2_1)
+        relu_dropout2_1 = tf.nn.dropout(tf.nn.relu(conv2_1, name="relu2_1"), keep_prob=keep_prob)
+        W2_2 = tf.get_variable(name='W2_2', initializer=tf.truncated_normal(shape=[3,3,128,128], stddev=0.02))
+        b2_2 = tf.get_variable(name='b2_2', initializer=tf.constant(0.0, shape=[128]))
+        conv2_2 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout2_1, W2_2, strides=[1, 1, 1, 1], padding="SAME"), b2_2)
+        relu_dropout2_2 = tf.nn.dropout(tf.nn.relu(conv2_2, name="relu2_2"), keep_prob=keep_prob)
         # Pooling Layer 2
-        pool2 = tf.nn.max_pool(relu_dropout2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool2')
+        pool2 = tf.nn.max_pool(relu_dropout2_2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool2')
 
         # Convolutional Layer 3
-        W3 = tf.get_variable(name='W3', initializer=tf.truncated_normal(shape=[3,3,256,384], stddev=0.02))
-        b3 = tf.get_variable(name='b3', initializer=tf.constant(0.0, shape=[384]))
-        conv3 = tf.nn.bias_add(tf.nn.conv2d(pool2, W3, strides=[1, 1, 1, 1], padding="SAME"), b3)
-        relu_dropout3 = tf.nn.dropout(tf.nn.relu(conv3, name="relu3"), keep_prob=keep_prob)
+        W3_1 = tf.get_variable(name='W3_1', initializer=tf.truncated_normal(shape=[3,3,128,256], stddev=0.02))
+        b3_1 = tf.get_variable(name='b3_1', initializer=tf.constant(0.0, shape=[256]))
+        conv3_1 = tf.nn.bias_add(tf.nn.conv2d(pool2, W3_1, strides=[1, 1, 1, 1], padding="SAME"), b3_1)
+        relu_dropout3_1 = tf.nn.dropout(tf.nn.relu(conv3_1, name="relu3_1"), keep_prob=keep_prob)
+        W3_2 = tf.get_variable(name='W3_2', initializer=tf.truncated_normal(shape=[3,3,256,256], stddev=0.02))
+        b3_2 = tf.get_variable(name='b3_2', initializer=tf.constant(0.0, shape=[256]))
+        conv3_2 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout3_1, W3_2, strides=[1, 1, 1, 1], padding="SAME"), b3_2)
+        relu_dropout3_2 = tf.nn.dropout(tf.nn.relu(conv3_2, name="relu3_2"), keep_prob=keep_prob)
+        W3_3 = tf.get_variable(name='W3_3', initializer=tf.truncated_normal(shape=[3,3,256,256], stddev=0.02))
+        b3_3 = tf.get_variable(name='b3_3', initializer=tf.constant(0.0, shape=[256]))
+        conv3_3 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout3_2, W3_3, strides=[1, 1, 1, 1], padding="SAME"), b3_3)
+        relu_dropout3_3 = tf.nn.dropout(tf.nn.relu(conv3_3, name="relu3_3"), keep_prob=keep_prob)
+        W3_4 = tf.get_variable(name='W3_4', initializer=tf.truncated_normal(shape=[3,3,256,256], stddev=0.02))
+        b3_4 = tf.get_variable(name='b3_4', initializer=tf.constant(0.0, shape=[256]))
+        conv3_4 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout3_3, W3_4, strides=[1, 1, 1, 1], padding="SAME"), b3_4)
+        relu_dropout3_4 = tf.nn.dropout(tf.nn.relu(conv3_4, name="relu3_4"), keep_prob=keep_prob)
+        # Pooling Layer 3
+        pool3 = tf.nn.max_pool(relu_dropout3_4, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool3')
 
         # Convolutional Layer 4
-        W4 = tf.get_variable(name='W4', initializer=tf.truncated_normal(shape=[3,3,384,384], stddev=0.02))
-        b4 = tf.get_variable(name='b4', initializer=tf.constant(0.0, shape=[384]))
-        conv4 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout3, W4, strides=[1, 1, 1, 1], padding="SAME"), b4)
-        relu_dropout4 = tf.nn.dropout(tf.nn.relu(conv4, name="relu4"), keep_prob=keep_prob)
+        W4_1 = tf.get_variable(name='W4_1', initializer=tf.truncated_normal(shape=[3,3,256,512], stddev=0.02))
+        b4_1 = tf.get_variable(name='b4_1', initializer=tf.constant(0.0, shape=[512]))
+        conv4_1 = tf.nn.bias_add(tf.nn.conv2d(pool3, W4_1, strides=[1, 1, 1, 1], padding="SAME"), b4_1)
+        relu_dropout4_1 = tf.nn.dropout(tf.nn.relu(conv4_1, name="relu4_1"), keep_prob=keep_prob)
+        W4_2 = tf.get_variable(name='W4_2', initializer=tf.truncated_normal(shape=[3,3,512,512], stddev=0.02))
+        b4_2 = tf.get_variable(name='b4_2', initializer=tf.constant(0.0, shape=[512]))
+        conv4_2 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout4_1, W4_2, strides=[1, 1, 1, 1], padding="SAME"), b4_2)
+        relu_dropout4_2 = tf.nn.dropout(tf.nn.relu(conv4_2, name="relu4_2"), keep_prob=keep_prob)
+        W4_3 = tf.get_variable(name='W4_3', initializer=tf.truncated_normal(shape=[3,3,512,512], stddev=0.02))
+        b4_3 = tf.get_variable(name='b4_3', initializer=tf.constant(0.0, shape=[512]))
+        conv4_3 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout4_2, W4_3, strides=[1, 1, 1, 1], padding="SAME"), b4_3)
+        relu_dropout4_3 = tf.nn.dropout(tf.nn.relu(conv4_3, name="relu4_3"), keep_prob=keep_prob)
+        W4_4 = tf.get_variable(name='W4_4', initializer=tf.truncated_normal(shape=[3,3,512,512], stddev=0.02))
+        b4_4 = tf.get_variable(name='b4_4', initializer=tf.constant(0.0, shape=[512]))
+        conv4_4 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout4_3, W4_4, strides=[1, 1, 1, 1], padding="SAME"), b4_4)
+        relu_dropout4_4 = tf.nn.dropout(tf.nn.relu(conv4_4, name="relu4_4"), keep_prob=keep_prob)
+        # Pooling Layer 4
+        pool4 = tf.nn.max_pool(relu_dropout4_4, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool4')
 
         # Convolutional Layer 5
-        W5 = tf.get_variable(name='W5', initializer=tf.truncated_normal(shape=[3,3,384,256], stddev=0.02))
-        b5 = tf.get_variable(name='b5', initializer=tf.constant(0.0, shape=[256]))
-        conv5 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout4, W5, strides=[1, 1, 1, 1], padding="SAME"), b5)
-        relu_dropout5 = tf.nn.dropout(tf.nn.relu(conv5, name="relu5"), keep_prob=keep_prob)
+        W5_1 = tf.get_variable(name='W5_1', initializer=tf.truncated_normal(shape=[3,3,512,512], stddev=0.02))
+        b5_1 = tf.get_variable(name='b5_1', initializer=tf.constant(0.0, shape=[512]))
+        conv5_1 = tf.nn.bias_add(tf.nn.conv2d(pool4, W5_1, strides=[1, 1, 1, 1], padding="SAME"), b5_1)
+        relu_dropout5_1 = tf.nn.dropout(tf.nn.relu(conv5_1, name="relu5_1"), keep_prob=keep_prob)
+        W5_2 = tf.get_variable(name='W5_2', initializer=tf.truncated_normal(shape=[3,3,512,512], stddev=0.02))
+        b5_2 = tf.get_variable(name='b5_2', initializer=tf.constant(0.0, shape=[512]))
+        conv5_2 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout5_1, W5_2, strides=[1, 1, 1, 1], padding="SAME"), b5_2)
+        relu_dropout5_2 = tf.nn.dropout(tf.nn.relu(conv5_2, name="relu5_2"), keep_prob=keep_prob)
+        W5_3 = tf.get_variable(name='W5_3', initializer=tf.truncated_normal(shape=[3,3,512,512], stddev=0.02))
+        b5_3 = tf.get_variable(name='b5_3', initializer=tf.constant(0.0, shape=[512]))
+        conv5_3 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout5_2, W5_3, strides=[1, 1, 1, 1], padding="SAME"), b5_3)
+        relu_dropout5_3 = tf.nn.dropout(tf.nn.relu(conv5_3, name="relu5_3"), keep_prob=keep_prob)
+        W5_4 = tf.get_variable(name='W5_4', initializer=tf.truncated_normal(shape=[3,3,512,512], stddev=0.02))
+        b5_4 = tf.get_variable(name='b5_4', initializer=tf.constant(0.0, shape=[512]))
+        conv5_4 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout5_3, W5_4, strides=[1, 1, 1, 1], padding="SAME"), b5_4)
+        relu_dropout5_4 = tf.nn.dropout(tf.nn.relu(conv5_4, name="relu4_4"), keep_prob=keep_prob)
         # Pooling Layer 5
-        pool5 = tf.nn.max_pool(relu_dropout5, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool5')
+        pool5 = tf.nn.max_pool(relu_dropout5_4, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME", name='pool5')
 
         # Convolutional Layer 6
-        W6 = tf.get_variable(name='W6', initializer=tf.truncated_normal(shape=[1,1,256,2048], stddev=0.02))
-        b6 = tf.get_variable(name='b6', initializer=tf.constant(0.0, shape=[2048]))
+        W6 = tf.get_variable(name='W6', initializer=tf.truncated_normal(shape=[7,7,512,4096], stddev=0.02))
+        b6 = tf.get_variable(name='b6', initializer=tf.constant(0.0, shape=[4096]))
         conv6 = tf.nn.bias_add(tf.nn.conv2d(pool5, W6, strides=[1, 1, 1, 1], padding="SAME"), b6)
         relu_dropout6 = tf.nn.dropout(tf.nn.relu(conv6, name="relu6"), keep_prob=keep_prob)
-
+        
         # Convolutional Layer 7
-        W7 = tf.get_variable(name='W7', initializer=tf.truncated_normal(shape=[1,1,2048,2048], stddev=0.02))
-        b7 = tf.get_variable(name='b7', initializer=tf.constant(0.0, shape=[2048]))
+        W7 = tf.get_variable(name='W7', initializer=tf.truncated_normal(shape=[1,1,4096,4096], stddev=0.02))
+        b7 = tf.get_variable(name='b7', initializer=tf.constant(0.0, shape=[4096]))
         conv7 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout6, W7, strides=[1, 1, 1, 1], padding="SAME"), b7)
         relu_dropout7 = tf.nn.dropout(tf.nn.relu(conv7, name="relu7"), keep_prob=keep_prob)
         
         # Convolutional Layer 8
-        W8 = tf.get_variable(name='W8', initializer=tf.truncated_normal(shape=[1,1,2048,NUM_OF_CLASSES+1], stddev=0.02))
+        W8 = tf.get_variable(name='W8', initializer=tf.truncated_normal(shape=[1,1,4096,NUM_OF_CLASSES+1], stddev=0.02))
         b8 = tf.get_variable(name='b8', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
         conv8 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout7, W8, strides=[1, 1, 1, 1], padding="SAME"), b8)
         
-
         # ---------------------------------------- UPSAMPLING ---------------------------------------- 
         # Deconvolution Layer 1
-        deconv_shape1 = pool2.get_shape()
-        W_t1 = tf.get_variable(name='W_t1', initializer=tf.truncated_normal(shape=[3, 3, deconv_shape1[3].value, NUM_OF_CLASSES+1], stddev=0.02))
+        deconv_shape1 = pool4.get_shape()
+        W_t1 = tf.get_variable(name='W_t1', initializer=tf.truncated_normal(shape=[4, 4, deconv_shape1[3].value, NUM_OF_CLASSES+1], stddev=0.02))
         b_t1 = tf.get_variable(name='b_t1', initializer=tf.constant(0.0, shape=[deconv_shape1[3].value]))
-        conv_t1 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv8, W_t1, output_shape=tf.shape(pool2), strides=[1, 2, 2, 1], padding="SAME"), b_t1)
-        skip_1 = tf.add(conv_t1, pool2, name="skip_1")
+        conv_t1 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv8, W_t1, output_shape=tf.shape(pool4), strides=[1, 2, 2, 1], padding="SAME"), b_t1)
+        skip_1 = tf.add(conv_t1, pool4, name="skip_1")
 
         # Deconvolution Layer 2
-        deconv_shape2 = pool1.get_shape()
-        W_t2 = tf.get_variable(name='W_t2', initializer=tf.truncated_normal(shape=[5, 5, deconv_shape2[3].value, deconv_shape1[3].value], stddev=0.02))
+        deconv_shape2 = pool3.get_shape()
+        W_t2 = tf.get_variable(name='W_t2', initializer=tf.truncated_normal(shape=[4, 4, deconv_shape2[3].value, deconv_shape1[3].value], stddev=0.02))
         b_t2 = tf.get_variable(name='b_t2', initializer=tf.constant(0.0, shape=[deconv_shape2[3].value]))
-        conv_t2 = tf.nn.bias_add(tf.nn.conv2d_transpose(skip_1, W_t2, output_shape=tf.shape(pool1), strides=[1, 2, 2, 1], padding="SAME"), b_t2)
-        skip_2 = tf.add(conv_t2, pool1, name="skip_2")
+        conv_t2 = tf.nn.bias_add(tf.nn.conv2d_transpose(skip_1, W_t2, output_shape=tf.shape(pool3), strides=[1, 2, 2, 1], padding="SAME"), b_t2)
+        skip_2 = tf.add(conv_t2, pool3, name="skip_2")
 
         # Deconvolution Layer 3
-        deconv_shape3 = tf.stack([tf.shape(image)[0], tf.shape(image)[1], tf.shape(image)[2], NUM_OF_CLASSES+1])
-        W_t3 = tf.get_variable(name='W_t3', initializer=tf.truncated_normal(shape=[11, 11, NUM_OF_CLASSES+1, deconv_shape2[3].value], stddev=0.02))
+        shape = tf.shape(image)
+        deconv_shape3 = tf.stack([shape[0], shape[1], shape[2], NUM_OF_CLASSES+1])
+        W_t3 = tf.get_variable(name='W_t3', initializer=tf.truncated_normal(shape=[16, 16, NUM_OF_CLASSES+1, deconv_shape2[3].value], stddev=0.02))
         b_t3 = tf.get_variable(name='b_t3', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
-        conv_t3 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv_t2, W_t3, output_shape=deconv_shape3, strides=[1, 8, 8, 1], padding="SAME"), b_t3)
+        conv_t3 = tf.nn.bias_add(tf.nn.conv2d_transpose(skip_2, W_t3, output_shape=deconv_shape3, strides=[1, 8, 8, 1], padding="SAME"), b_t3)
 
         annotation_pred = tf.argmax(conv_t3, dimension=3, name="prediction")
-        reg_loss = tf.nn.l2_loss(W1)+tf.nn.l2_loss(W2)+tf.nn.l2_loss(W3)+tf.nn.l2_loss(W4)+tf.nn.l2_loss(W5)+tf.nn.l2_loss(W6)+tf.nn.l2_loss(W7)+tf.nn.l2_loss(W8)
+        reg_loss = tf.nn.l2_loss(W1_1)+tf.nn.l2_loss(W1_2)+tf.nn.l2_loss(W2_1)+tf.nn.l2_loss(W2_2)+tf.nn.l2_loss(W3_1)+tf.nn.l2_loss(W3_2)+tf.nn.l2_loss(W3_3)+tf.nn.l2_loss(W3_4)+tf.nn.l2_loss(W4_1)+tf.nn.l2_loss(W4_2)+tf.nn.l2_loss(W4_3)+tf.nn.l2_loss(W4_4)+tf.nn.l2_loss(W5_1)+tf.nn.l2_loss(W5_2)+tf.nn.l2_loss(W5_3)+tf.nn.l2_loss(W5_4)+tf.nn.l2_loss(W5_1)+tf.nn.l2_loss(W6)+tf.nn.l2_loss(W7)+tf.nn.l2_loss(W8)
 
     return tf.expand_dims(annotation_pred, dim=3), conv_t3, reg_loss
+
 
 def train(loss_val, var_list, g_step):
     optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
     grads = optimizer.compute_gradients(loss_val, var_list=var_list)
     return optimizer.apply_gradients(grads, global_step=g_step)
+
 
 def main(mode, data_dir, image_path, image_dir):
     keep_probability = tf.placeholder(tf.float32, name="keep_probabilty")
@@ -303,6 +347,7 @@ if __name__ == "__main__":
         parser.error('--visualize requires --image/--imagedir')
 
     main(mode=args.mode, data_dir=args.dataset, image_path=args.image, image_dir=args.imagedir)
+
 
 
 

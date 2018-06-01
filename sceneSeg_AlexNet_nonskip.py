@@ -29,8 +29,8 @@ BATCH_SIZE = 10
 TRAIN_CLASSES = range(19) #[0, 13] # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
-LOG_DIR = dirname(__file__)+'/logs/AlexNet_skip_c'+str(NUM_OF_CLASSES)+'/'
-RESULT_DIR = '/Results/AlexNet_skip_c'+str(NUM_OF_CLASSES)+'/'
+LOG_DIR = dirname(__file__)+'/logs/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
+RESULT_DIR = '/Results/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
 
 MAX_ITERATION = int(1e5 + 1)
@@ -82,7 +82,7 @@ def inference(image, keep_prob):
     :param keep_prob:
     :return:
     """
-    print("setting up AlexNet with skip connection...")
+    print("setting up AlexNet without skip connection...")
 
     with tf.variable_scope("inference"):
         # ---------------------------------------- DOWNSAMPLING ---------------------------------------- 
@@ -140,24 +140,24 @@ def inference(image, keep_prob):
         conv8 = tf.nn.bias_add(tf.nn.conv2d(relu_dropout7, W8, strides=[1, 1, 1, 1], padding="SAME"), b8)
         
 
+
         # ---------------------------------------- UPSAMPLING ---------------------------------------- 
         # Deconvolution Layer 1
-        deconv_shape1 = pool2.get_shape()
-        W_t1 = tf.get_variable(name='W_t1', initializer=tf.truncated_normal(shape=[3, 3, deconv_shape1[3].value, NUM_OF_CLASSES+1], stddev=0.02))
-        b_t1 = tf.get_variable(name='b_t1', initializer=tf.constant(0.0, shape=[deconv_shape1[3].value]))
-        conv_t1 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv8, W_t1, output_shape=tf.shape(pool2), strides=[1, 2, 2, 1], padding="SAME"), b_t1)
-        skip_1 = tf.add(conv_t1, pool2, name="skip_1")
+        deconv_shape1 = tf.stack([tf.shape(pool2)[0], tf.shape(pool2)[1], tf.shape(pool2)[2], NUM_OF_CLASSES+1])
+        W_t1 = tf.get_variable(name='W_t1', initializer=tf.truncated_normal(shape=[3, 3, NUM_OF_CLASSES+1, NUM_OF_CLASSES+1], stddev=0.02))
+        b_t1 = tf.get_variable(name='b_t1', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
+        conv_t1 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv8, W_t1, output_shape=deconv_shape1, strides=[1, 2, 2, 1], padding="SAME"), b_t1)
+
 
         # Deconvolution Layer 2
-        deconv_shape2 = pool1.get_shape()
-        W_t2 = tf.get_variable(name='W_t2', initializer=tf.truncated_normal(shape=[5, 5, deconv_shape2[3].value, deconv_shape1[3].value], stddev=0.02))
-        b_t2 = tf.get_variable(name='b_t2', initializer=tf.constant(0.0, shape=[deconv_shape2[3].value]))
-        conv_t2 = tf.nn.bias_add(tf.nn.conv2d_transpose(skip_1, W_t2, output_shape=tf.shape(pool1), strides=[1, 2, 2, 1], padding="SAME"), b_t2)
-        skip_2 = tf.add(conv_t2, pool1, name="skip_2")
+        deconv_shape2 = tf.stack([tf.shape(pool1)[0], tf.shape(pool1)[1], tf.shape(pool1)[2], NUM_OF_CLASSES+1])
+        W_t2 = tf.get_variable(name='W_t2', initializer=tf.truncated_normal(shape=[5, 5, NUM_OF_CLASSES+1, NUM_OF_CLASSES+1], stddev=0.02))
+        b_t2 = tf.get_variable(name='b_t2', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
+        conv_t2 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv_t1, W_t2, output_shape=deconv_shape2, strides=[1, 2, 2, 1], padding="SAME"), b_t2)
 
         # Deconvolution Layer 3
         deconv_shape3 = tf.stack([tf.shape(image)[0], tf.shape(image)[1], tf.shape(image)[2], NUM_OF_CLASSES+1])
-        W_t3 = tf.get_variable(name='W_t3', initializer=tf.truncated_normal(shape=[11, 11, NUM_OF_CLASSES+1, deconv_shape2[3].value], stddev=0.02))
+        W_t3 = tf.get_variable(name='W_t3', initializer=tf.truncated_normal(shape=[11, 11, NUM_OF_CLASSES+1, NUM_OF_CLASSES+1], stddev=0.02))
         b_t3 = tf.get_variable(name='b_t3', initializer=tf.constant(0.0, shape=[NUM_OF_CLASSES+1]))
         conv_t3 = tf.nn.bias_add(tf.nn.conv2d_transpose(conv_t2, W_t3, output_shape=deconv_shape3, strides=[1, 8, 8, 1], padding="SAME"), b_t3)
 
@@ -194,7 +194,7 @@ def main(mode, data_dir, image_path, image_dir):
     elif mode == "visualize":
         img = tf.placeholder(tf.float32, shape=[None, IMSIZE_X, IMSIZE_Y, 3], name="input_image")
 
-    pred_label, logits, regularization_loss = inference(img, keep_probability)
+    pred_label,logits,regularization_loss = inference(img, keep_probability)
 
     if mode == "train":
         tf.summary.image("input_image", img, max_outputs=2)
@@ -303,6 +303,7 @@ if __name__ == "__main__":
         parser.error('--visualize requires --image/--imagedir')
 
     main(mode=args.mode, data_dir=args.dataset, image_path=args.image, image_dir=args.imagedir)
+
 
 
 
