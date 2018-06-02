@@ -31,8 +31,7 @@ NUM_OF_CLASSES = len(TRAIN_CLASSES)
 LOG_DIR = dirname(__file__)+'/logs/VGG_c'+str(NUM_OF_CLASSES)+'/'
 RESULT_DIR = '/Results/VGG_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
-
-MAX_ITERATION = int(1e5 + 1)
+MAX_ITERATION = int(1.8*1e5)
 IMSIZE_X = 256
 IMSIZE_Y = 512
 RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(190,153,153),
@@ -63,7 +62,7 @@ def setup_dataset(im_fpath, lab_fpath):
     dataset = tf.data.Dataset.from_tensor_slices((im_fpath, lab_fpath))
     dataset = dataset.map(_parse_function)
     dataset = dataset.map(lambda im, lb_fpath: tuple(tf.py_func(_read_py_function, [im, lb_fpath], [tf.float32, tf.float32])))
-    return dataset.batch(BATCH_SIZE)
+    return dataset.batch(BATCH_SIZE).repeat()
 
 def setup_dataset_dir(data_dir, dataset_mode):
     data_mode_dir = data_dir+"/"+dataset_mode
@@ -350,7 +349,6 @@ if __name__ == "__main__":
         parser.error('--visualize requires --image/--imagedir')
 
     main(mode=args.mode, data_dir=args.dataset, image_path=args.image, image_dir=args.imagedir)
-
 
 
 
