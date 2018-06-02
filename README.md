@@ -9,7 +9,7 @@ For training:
 For visualization:
 
     python sceneSeg.py --mode visualize --image IMG_PATH
-   
+    python sceneSeg.py --mode visualize --imagedir IMG_FOLDER_DIR   
    
 DATASET_DIR is the direction of the dataset folder.
 
