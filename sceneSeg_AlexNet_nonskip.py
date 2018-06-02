@@ -1,5 +1,4 @@
 from __future__ import print_function
-import BatchDatsetReader as batchreader
 from six.moves import xrange
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -26,7 +25,7 @@ Visualization:
 LEARNING_RATE = 0.0001
 REGULARIZATION_SCLAE = 0.00001
 BATCH_SIZE = 10
-TRAIN_CLASSES = range(19) #[0, 13] # max: range(19)
+TRAIN_CLASSES = range(19) # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 LOG_DIR = dirname(__file__)+'/logs/AlexNet_c'+str(NUM_OF_CLASSES)+'/'
@@ -71,8 +70,8 @@ def setup_dataset_dir(data_dir, dataset_mode):
     im_fpath = glob.glob(data_mode_dir+"/leftImg8bit/*.png")
     lab_fpath = []
     for i in im_fpath:
-        lb_fn = os.path.splitext(i.split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
-        lab_fpath = lab_fpath + [data_mode_dir+"/gtFine/"+lb_fn]
+        lb_fn = os.path.splitext(i.split('/')[-1])[0][0:-12] + '_gtCoarse_color.mat'
+        lab_fpath = lab_fpath + [data_mode_dir+"/gtCoarse/"+lb_fn]
     return im_fpath, lab_fpath
 
 def inference(image, keep_prob):

@@ -1,13 +1,12 @@
 from __future__ import print_function
-import BatchDatsetReader as batchreader
 from six.moves import xrange
 from PIL import Image
 import matplotlib.pyplot as plt
+import scipy.misc as spmi
 import scipy.io as spio
 import tensorflow as tf
 import numpy as np
 import argparse
-import scipy.misc as spmi
 import datetime
 import glob 
 import tqdm
@@ -25,8 +24,8 @@ Visualization:
 # ==========================================================================================
 LEARNING_RATE = 0.0001
 REGULARIZATION_SCLAE = 0.00001
-BATCH_SIZE = 5
-TRAIN_CLASSES = [0, 2, 8, 11, 13] # max: range(19)
+BATCH_SIZE = 10
+TRAIN_CLASSES = range(19) # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 LOG_DIR = dirname(__file__)+'/logs/VGG_skip_c'+str(NUM_OF_CLASSES)+'/'
@@ -40,6 +39,12 @@ RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(
                 5:(153,153,153),6:(250,170,30),7:(220,220,0),8:(107,142,35),9:(152,251,152),
                 10:(70,130,180),11:(220,20,60),12:(255,0,0),13:(0,0,142),14:(0,0,70),
                 15:(0,60,100),16:(0,80,100),17:(0,0,230),18:(119,11,32),19:(0,0,0)}
+
+""" Cityscapes Dataset : https://www.cityscapes-dataset.com/
+    0: road   1: sidewalk        2: building       3: wall         4: fence
+    5: pole   6: traffic light   7: traffic sign   8: vegetation   9: terrain
+    10: sky   11: person         12: rider         13: car         14: trunck   
+    15: bus   16: train          17: motorcycle    18: bicycle                  """
 
 def _read_py_function(im, lb_fpath):
     lab = np.array(spio.loadmat(lb_fpath)['label']).astype(np.float32)
@@ -65,8 +70,8 @@ def setup_dataset_dir(data_dir, dataset_mode):
     im_fpath = glob.glob(data_mode_dir+"/leftImg8bit/*.png")
     lab_fpath = []
     for i in im_fpath:
-        lb_fn = os.path.splitext(i.split('/')[-1])[0][0:-12] + '_gtFine_color.mat'
-        lab_fpath = lab_fpath + [data_mode_dir+"/gtFine/"+lb_fn]
+        lb_fn = os.path.splitext(i.split('/')[-1])[0][0:-12] + '_gtCoarse_color.mat'
+        lab_fpath = lab_fpath + [data_mode_dir+"/gtCoarse/"+lb_fn]
     return im_fpath, lab_fpath
 
 def inference(image, keep_prob):
