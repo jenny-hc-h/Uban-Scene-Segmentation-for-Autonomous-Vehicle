@@ -24,14 +24,15 @@ Visualization:
 # ==========================================================================================
 LEARNING_RATE = 0.0001
 REGULARIZATION_SCLAE = 0.00001
-BATCH_SIZE = 10
+BATCH_SIZE = 2
 TRAIN_CLASSES = range(19) # max: range(19)
 NUM_OF_CLASSES = len(TRAIN_CLASSES) 
 # ..........................................................................................
 LOG_DIR = dirname(__file__)+'/logs/VGG_c'+str(NUM_OF_CLASSES)+'/'
 RESULT_DIR = '/Results/VGG_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
-MAX_ITERATION = int(1.8*1e5)
+NUM_OF_EPOCH = 30
+MAX_ITERATION = int(NUM_OF_EPOCH*18000/BATCH_SIZE)
 IMSIZE_X = 256
 IMSIZE_Y = 512
 RGB_OF_CLASSES = {0:(128,54,128),1:(244,35,232),2:(70,70,70),3:(102,102,156),4:(190,153,153),
@@ -348,6 +349,7 @@ if __name__ == "__main__":
     if (args.mode == 'visualize') and ((args.image is None) and (args.imagedir is None)):
         parser.error('--visualize requires --image/--imagedir')
 
+    print("\n============ Max iteration : %d / Number of epoch: %d ============\n" % (MAX_ITERATION, NUM_OF_EPOCH))
     main(mode=args.mode, data_dir=args.dataset, image_path=args.image, image_dir=args.imagedir)
 
 
