@@ -31,7 +31,7 @@ NUM_OF_CLASSES = len(TRAIN_CLASSES)
 LOG_DIR = dirname(__file__)+'/logs/VGG_skip_c'+str(NUM_OF_CLASSES)+'/'
 RESULT_DIR = '/Results/VGG_skip_c'+str(NUM_OF_CLASSES)+'/'
 # ==========================================================================================
-NUM_OF_EPOCH = 30
+NUM_OF_EPOCH = 100
 MAX_ITERATION = int(NUM_OF_EPOCH*18000/BATCH_SIZE)
 IMSIZE_X = 256
 IMSIZE_Y = 512
@@ -351,6 +351,7 @@ if __name__ == "__main__":
     if (args.mode == 'visualize') and ((args.image is None) and (args.imagedir is None)):
         parser.error('--visualize requires --image/--imagedir')
 
+    print("\n============ Max iteration : %d / Number of epoch: %d ============\n" % (MAX_ITERATION, NUM_OF_EPOCH))
     main(mode=args.mode, data_dir=args.dataset, image_path=args.image, image_dir=args.imagedir)
 
 
