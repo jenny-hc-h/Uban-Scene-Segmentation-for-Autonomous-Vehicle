@@ -7,7 +7,7 @@ ECE228 Fianal Project - Group 8
 In this project, we are going to use fully convolutional networks(FCN) to perform pixel-wised classification in urban scene images. We apply two popular models, AlexNet and VGG net, into fully convolutional networks, and try to compare the results of these two different model with/without skip connection. The skip connection is a method to add back the resolution we loss during the convolution and pooling operation.
 
 ## Source Code:
-### We provide four versions of code, which are
+We provide four versions of code, which are
 (1)sceneSeg_AlexNet_nonskip.py
 (2)sceneSeg_AlexNet_skip.py
 (3)sceneSeg_VGG_nonskip.py
