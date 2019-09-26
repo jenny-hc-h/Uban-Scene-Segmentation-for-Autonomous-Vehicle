@@ -1,4 +1,4 @@
-# ECE228_FinalProject
+# Uban Scene Segmentation for Autonomous Vehicle
 
 Uban Scene Segmentation for Autonomous Vehicle
 ECE228 Fianal Project - Group 8
